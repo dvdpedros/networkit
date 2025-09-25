@@ -244,25 +244,26 @@ jobs:
             echo "::set-output name=is-release::false"
           fi
 
-  upload-packages:
-    if: needs.check-release-tag.outputs.is-release == 'true' && github.repository == 'networkit/networkit'
-    name: 'PyPi release upload'
-    runs-on: ubuntu-22.04
-    needs: [cpython-macos, cpython-linux-x86_64, cpython-windows, source-distribution, check-release-tag]
+  release:
+    needs: source-distribution
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
         with:
-          path: ./dist
-      - uses: actions/setup-python@v5
-        name: Install Python
+          name: sdist-${{ github.run_id }}.tar.gz
+          path: dist
+
+      - name: Create GitHub Release and upload assets
+        uses: softprops/action-gh-release@v2
         with:
-          python-version: '3.12'
-      - name: Upload to TestPyPI
-        run: |
-          unzip "./dist/artifact/*.zip"
-          pip install twine 
-          python3 -m twine upload --verbose --skip-existing ./dist/artifact/*
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/*.tar.gz
         env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TWINE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
