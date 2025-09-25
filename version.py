@@ -1,6 +1,8 @@
+import subprocess
+
 name='networkit'
 
-version='11.1.post1'
+version='11.1.post2+' + subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8')[:7]
 
 url='https://networkit.github.io/'
 

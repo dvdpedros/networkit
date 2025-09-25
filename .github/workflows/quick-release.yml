@@ -1,0 +1,60 @@
+name: Quick Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  quick-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: true
+          fetch-depth: 0
+
+      - name: Get version from version.py
+        id: get_version
+        run: |
+          VERSION=$(python -c "import sys; sys.path.append('.'); from version import version; print(version)")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Found version: $VERSION"
+
+      - name: Create and push tag
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+          echo "Created and pushed tag v$VERSION"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build source distribution
+        run: |
+          pip install cython==3.0.9 numpy setuptools
+          python3 setup.py build_ext
+          python3 setup.py sdist
+          echo "Source distribution built successfully"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: v${{ steps.get_version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Output information
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          echo "Version updated to $VERSION"
+          echo "Tag v$VERSION has been created and pushed"
+          echo "GitHub release created with source distribution"
