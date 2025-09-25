@@ -39,8 +39,32 @@ jobs:
           git push origin "v$VERSION"
           echo "Created and pushed tag v$VERSION"
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build source distribution
+        run: |
+          pip install cython==3.0.9 numpy setuptools
+          python3 setup.py build_ext
+          python3 setup.py sdist
+          echo "Source distribution built successfully"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: v${{ inputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Output information
         run: |
           echo "Version updated to ${{ inputs.version }}"
           echo "Tag v${{ inputs.version }} has been created and pushed"
-          echo "The build_wheels workflow should now be triggered automatically"
+          echo "GitHub release created with source distribution"
