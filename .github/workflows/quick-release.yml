@@ -1,0 +1,46 @@
+name: Quick Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 11.2.2)'
+        required: true
+        type: string
+
+jobs:
+  quick-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Update version in pyproject.toml
+        run: |
+          VERSION="${{ inputs.version }}"
+          sed -i "s/version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+          echo "Updated pyproject.toml with version $VERSION"
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add pyproject.toml
+          git commit -m "Bump version to ${{ inputs.version }}"
+          git push origin master
+
+      - name: Create and push tag
+        run: |
+          VERSION="${{ inputs.version }}"
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+          echo "Created and pushed tag v$VERSION"
+
+      - name: Output information
+        run: |
+          echo "Version updated to ${{ inputs.version }}"
+          echo "Tag v${{ inputs.version }} has been created and pushed"
+          echo "The build_wheels workflow should now be triggered automatically"
